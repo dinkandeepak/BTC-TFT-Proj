@@ -32,6 +32,19 @@ python -m src dashboard --timeframes 15m 1h 4h --variants full price_only
 python -m src dashboard-web --host 127.0.0.1 --port 8501
 ```
 
+## Backend Ensemble Service
+This repo now includes a reusable backend ensemble package for multi-horizon (1H/24H) model fusion:
+- [src/ensemble/core.py](src/ensemble/core.py): ensemble weights, direction, confidence
+- [src/ensemble/evaluation.py](src/ensemble/evaluation.py): rolling resolved-trade metrics
+- [src/ensemble/worker.py](src/ensemble/worker.py): auto-update loop (`auto_update_once`, `auto_update_worker`)
+
+Typical integration:
+```python
+from src.ensemble.core import compute_ensemble, ModelSnapshot
+from src.ensemble.evaluation import RollingEvaluator
+from src.ensemble.worker import auto_update_worker
+```
+
 ## Deployment
 ### Docker (local/server)
 Build the container image:
