@@ -114,7 +114,7 @@ def compute_training_cutoff(model_frame: pd.DataFrame, max_prediction_length: in
 
 def _import_ml_dependencies() -> dict[str, Any]:
     import lightning as L
-    from lightning.pytorch.callbacks import EarlyStopping, LearningRateMonitor, ModelCheckpoint
+    from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
     from pytorch_forecasting import TemporalFusionTransformer, TimeSeriesDataSet
     from pytorch_forecasting.data import GroupNormalizer
     from pytorch_forecasting.metrics import QuantileLoss
@@ -122,7 +122,6 @@ def _import_ml_dependencies() -> dict[str, Any]:
     return {
         "L": L,
         "EarlyStopping": EarlyStopping,
-        "LearningRateMonitor": LearningRateMonitor,
         "ModelCheckpoint": ModelCheckpoint,
         "TemporalFusionTransformer": TemporalFusionTransformer,
         "TimeSeriesDataSet": TimeSeriesDataSet,
@@ -131,12 +130,25 @@ def _import_ml_dependencies() -> dict[str, Any]:
     }
 
 
+def resolve_lengths(timeframe: str, args: Any) -> tuple[int, int, int]:
+    spec = TIMEFRAME_SPECS[timeframe]
+    min_encoder = int(getattr(args, "min_encoder_length", 0) or spec.min_encoder_length)
+    max_encoder = int(getattr(args, "max_encoder_length", 0) or spec.max_encoder_length)
+    prediction = int(getattr(args, "prediction_length", 0) or spec.max_prediction_length)
+
+    if min_encoder < 1 or max_encoder < 1 or prediction < 1:
+        raise ValueError("Encoder and prediction lengths must be positive integers.")
+    if min_encoder > max_encoder:
+        raise ValueError("min_encoder_length cannot be greater than max_encoder_length.")
+    return min_encoder, max_encoder, prediction
+
+
 def train_single_variant(timeframe: str, variant: str, args: Any) -> Path:
     deps = _import_ml_dependencies()
-    spec = TIMEFRAME_SPECS[timeframe]
     frame = load_processed_data(timeframe)
     model_frame, feature_columns = prepare_model_frame(frame, variant)
-    training_cutoff = compute_training_cutoff(model_frame, spec.max_prediction_length)
+    min_encoder_length, max_encoder_length, prediction_length = resolve_lengths(timeframe, args)
+    training_cutoff = compute_training_cutoff(model_frame, prediction_length)
 
     TimeSeriesDataSet = deps["TimeSeriesDataSet"]
     GroupNormalizer = deps["GroupNormalizer"]
@@ -144,7 +156,6 @@ def train_single_variant(timeframe: str, variant: str, args: Any) -> Path:
     QuantileLoss = deps["QuantileLoss"]
     L = deps["L"]
     EarlyStopping = deps["EarlyStopping"]
-    LearningRateMonitor = deps["LearningRateMonitor"]
     ModelCheckpoint = deps["ModelCheckpoint"]
 
     training = TimeSeriesDataSet(
@@ -152,10 +163,10 @@ def train_single_variant(timeframe: str, variant: str, args: Any) -> Path:
         time_idx="time_idx",
         target=TARGET_COLUMN,
         group_ids=["symbol"],
-        min_encoder_length=spec.min_encoder_length,
-        max_encoder_length=spec.max_encoder_length,
+        min_encoder_length=min_encoder_length,
+        max_encoder_length=max_encoder_length,
         min_prediction_length=1,
-        max_prediction_length=spec.max_prediction_length,
+        max_prediction_length=prediction_length,
         static_categoricals=["symbol"],
         time_varying_known_reals=KNOWN_REAL_COLUMNS,
         time_varying_unknown_reals=feature_columns,
@@ -195,7 +206,6 @@ def train_single_variant(timeframe: str, variant: str, args: Any) -> Path:
     )
     callbacks = [
         EarlyStopping(monitor="val_loss", mode="min", patience=6, min_delta=1e-4),
-        LearningRateMonitor(logging_interval="epoch"),
         checkpoint_callback,
     ]
 
@@ -244,6 +254,9 @@ def train_single_variant(timeframe: str, variant: str, args: Any) -> Path:
         "feature_columns": feature_columns,
         "best_model_path": str(final_ckpt),
         "training_cutoff": training_cutoff,
+        "min_encoder_length": min_encoder_length,
+        "max_encoder_length": max_encoder_length,
+        "prediction_length": prediction_length,
         "rows": len(model_frame),
     }
     (artifact_dir / "model_config.json").write_text(

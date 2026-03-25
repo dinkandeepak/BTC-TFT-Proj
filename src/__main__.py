@@ -44,6 +44,9 @@ def build_parser() -> argparse.ArgumentParser:
     train_parser.add_argument("--batch-size", type=int, default=128)
     train_parser.add_argument("--num-workers", type=int, default=0)
     train_parser.add_argument("--learning-rate", type=float, default=1e-3)
+    train_parser.add_argument("--min-encoder-length", type=int, default=None)
+    train_parser.add_argument("--max-encoder-length", type=int, default=None)
+    train_parser.add_argument("--prediction-length", type=int, default=None)
 
     backtest_parser = subparsers.add_parser("backtest", help="Run walk-forward backtests")
     backtest_parser.add_argument("--timeframe", choices=list(DEFAULT_TIMEFRAMES), required=True)
@@ -54,6 +57,9 @@ def build_parser() -> argparse.ArgumentParser:
     backtest_parser.add_argument("--max-epochs", type=int, default=10)
     backtest_parser.add_argument("--batch-size", type=int, default=128)
     backtest_parser.add_argument("--num-workers", type=int, default=0)
+    backtest_parser.add_argument("--min-encoder-length", type=int, default=None)
+    backtest_parser.add_argument("--max-encoder-length", type=int, default=None)
+    backtest_parser.add_argument("--prediction-length", type=int, default=None)
 
     predict_parser = subparsers.add_parser("predict", help="Generate quantile forecasts")
     predict_parser.add_argument("--timeframe", choices=list(DEFAULT_TIMEFRAMES), required=True)

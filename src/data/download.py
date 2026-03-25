@@ -13,7 +13,13 @@ import pandas as pd
 import requests
 from dotenv import load_dotenv
 
-from src.settings import DEFAULT_SYMBOL, DEFAULT_TIMEFRAMES, RAW_DATA_DIR, ensure_directories, normalize_symbol
+from src.settings import (
+    DEFAULT_SYMBOL,
+    DEFAULT_TIMEFRAMES,
+    RAW_DATA_DIR,
+    ensure_directories,
+    normalize_symbol,
+)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -309,14 +315,21 @@ def run_download(args: Any) -> None:
     _write_parquet(funding, RAW_DATA_DIR / "funding_rate.parquet")
 
     LOGGER.info("Downloading open interest history for %s", config.symbol)
-    open_interest_hist = fetch_open_interest_hist(
-        session=session,
-        base_url=config.base_url,
-        symbol=config.symbol,
-        start_ms=config.start_ms,
-        end_ms=config.end_ms,
-        max_retries=config.max_retries,
-    )
+    try:
+        open_interest_hist = fetch_open_interest_hist(
+            session=session,
+            base_url=config.base_url,
+            symbol=config.symbol,
+            start_ms=config.start_ms,
+            end_ms=config.end_ms,
+            max_retries=config.max_retries,
+        )
+    except RuntimeError as exc:
+        LOGGER.warning(
+            "Historical OI request failed (%s). Falling back to snapshot mode.",
+            exc,
+        )
+        open_interest_hist = pd.DataFrame()
 
     if open_interest_hist.empty:
         LOGGER.warning("Historical OI unavailable; saving snapshot fallback")

@@ -5,8 +5,9 @@ __pycache__/
 .ruff_cache/
 .env
 
-data/raw/*.parquet
-data/processed/*.parquet
+/data/
 artifacts/
 reports/plots/
 reports/*.md
+lightning_logs/
+*.egg-info/

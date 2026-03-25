@@ -15,13 +15,13 @@ from src.models.train_tft import (
     TARGET_COLUMN,
     load_processed_data,
     prepare_model_frame,
+    resolve_lengths,
 )
 from src.settings import (
     ARTIFACTS_DIR,
     DEFAULT_QUANTILES,
     PLOTS_DIR,
     REPORTS_DIR,
-    TIMEFRAME_SPECS,
     ensure_directories,
 )
 
@@ -131,6 +131,20 @@ def _extract_x_value(x_payload: Any, key: str) -> Any:
     return getattr(x_payload, key)
 
 
+def _split_prediction_result(prediction_result: Any) -> tuple[Any, Any]:
+    if isinstance(prediction_result, tuple) and len(prediction_result) == 2:
+        return prediction_result[0], prediction_result[1]
+    if hasattr(prediction_result, "output") and hasattr(prediction_result, "x"):
+        return prediction_result.output, prediction_result.x
+    if (
+        isinstance(prediction_result, dict)
+        and "output" in prediction_result
+        and "x" in prediction_result
+    ):
+        return prediction_result["output"], prediction_result["x"]
+    raise ValueError("Unexpected predict() return type when return_x=True.")
+
+
 def _predictions_to_frame(
     raw_predictions: Any,
     x_payload: Any,
@@ -231,12 +245,13 @@ def _train_fold_model(
     train_frame: pd.DataFrame,
     eval_frame: pd.DataFrame,
     feature_columns: list[str],
-    timeframe: str,
+    min_encoder_length: int,
+    max_encoder_length: int,
+    prediction_length: int,
     max_epochs: int,
     batch_size: int,
     num_workers: int,
 ) -> tuple[Any, Any]:
-    spec = TIMEFRAME_SPECS[timeframe]
     TimeSeriesDataSet = deps["TimeSeriesDataSet"]
     GroupNormalizer = deps["GroupNormalizer"]
     TemporalFusionTransformer = deps["TemporalFusionTransformer"]
@@ -249,10 +264,10 @@ def _train_fold_model(
         time_idx="time_idx",
         target=TARGET_COLUMN,
         group_ids=["symbol"],
-        min_encoder_length=spec.min_encoder_length,
-        max_encoder_length=spec.max_encoder_length,
+        min_encoder_length=min_encoder_length,
+        max_encoder_length=max_encoder_length,
         min_prediction_length=1,
-        max_prediction_length=spec.max_prediction_length,
+        max_prediction_length=prediction_length,
         static_categoricals=["symbol"],
         time_varying_known_reals=KNOWN_REAL_COLUMNS,
         time_varying_unknown_reals=feature_columns,
@@ -312,7 +327,7 @@ def run_single_backtest_variant(
     args: Any,
 ) -> dict[str, Any]:
     deps = _import_ml_dependencies()
-    spec = TIMEFRAME_SPECS[timeframe]
+    min_encoder_length, max_encoder_length, prediction_length = resolve_lengths(timeframe, args)
     base_frame = load_processed_data(timeframe)
     model_frame, feature_columns = prepare_model_frame(base_frame, variant)
     folds = generate_monthly_folds(
@@ -339,7 +354,7 @@ def run_single_backtest_variant(
             & (model_frame["timestamp"] <= fold.test_end)
         ].copy()
 
-        if len(train_df) < (spec.max_encoder_length + spec.max_prediction_length):
+        if len(train_df) < (max_encoder_length + prediction_length):
             LOGGER.warning("Skipping fold %s due to insufficient training rows", fold.fold_id)
             continue
         if val_df.empty or test_df.empty:
@@ -362,7 +377,9 @@ def run_single_backtest_variant(
             train_frame=train_df,
             eval_frame=eval_df,
             feature_columns=feature_columns,
-            timeframe=timeframe,
+            min_encoder_length=min_encoder_length,
+            max_encoder_length=max_encoder_length,
+            prediction_length=prediction_length,
             max_epochs=int(args.max_epochs),
             batch_size=int(args.batch_size),
             num_workers=int(args.num_workers),
@@ -381,7 +398,8 @@ def run_single_backtest_variant(
             num_workers=int(args.num_workers),
         )
 
-        raw_predictions, x_payload = model.predict(test_loader, mode="raw", return_x=True)
+        prediction_result = model.predict(test_loader, mode="raw", return_x=True)
+        raw_predictions, x_payload = _split_prediction_result(prediction_result)
         predictions = _predictions_to_frame(raw_predictions, x_payload, index_map=index_map)
         predictions = predictions[
             (predictions["timestamp"] >= fold.test_start)

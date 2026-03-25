@@ -208,7 +208,7 @@ def _build_single_timeframe(timeframe: str) -> Path:
         prefix="oi",
     )
     bars["open_interest_available"] = bars["oi_published_at"].notna().astype(int)
-    bars["open_interest"] = bars["open_interest"].fillna(method="ffill").fillna(0.0)
+    bars["open_interest"] = bars["open_interest"].ffill().fillna(0.0)
     bars["open_interest_log"] = np.log1p(bars["open_interest"].clip(lower=0))
     bars["open_interest_change"] = bars["open_interest_log"].diff().fillna(0.0)
 
