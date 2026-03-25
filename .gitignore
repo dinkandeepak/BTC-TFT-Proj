@@ -9,3 +9,4 @@ data/raw/*.parquet
 data/processed/*.parquet
 artifacts/
 reports/plots/
+reports/*.md

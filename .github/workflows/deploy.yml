@@ -85,6 +85,10 @@ jobs:
         run: |
           python -m src predict --timeframe "${{ inputs.timeframe }}" --variant "${{ inputs.predict_variant }}"
 
+      - name: Build dashboard
+        run: |
+          python -m src dashboard --timeframes 15m 1h 4h --variants full price_only --output dashboard.md
+
       - name: Upload data artifacts
         uses: actions/upload-artifact@v4
         with:

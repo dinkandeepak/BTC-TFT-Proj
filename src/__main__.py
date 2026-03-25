@@ -60,6 +60,26 @@ def build_parser() -> argparse.ArgumentParser:
     predict_parser.add_argument("--variant", choices=["auto", "full", "price_only"], default="auto")
     predict_parser.add_argument("--coverage-threshold", type=float, default=0.7)
 
+    dashboard_parser = subparsers.add_parser("dashboard", help="Build dashboard markdown report")
+    dashboard_parser.add_argument(
+        "--timeframes",
+        nargs="+",
+        default=list(DEFAULT_TIMEFRAMES),
+        choices=list(DEFAULT_TIMEFRAMES),
+    )
+    dashboard_parser.add_argument(
+        "--variants",
+        nargs="+",
+        default=["full", "price_only"],
+        choices=["full", "price_only"],
+    )
+    dashboard_parser.add_argument(
+        "--output",
+        type=str,
+        default="dashboard.md",
+        help="Output file path (relative paths are resolved under reports/).",
+    )
+
     return parser
 
 
@@ -87,6 +107,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         from src.models.predict import run_predict
 
         run_predict(args)
+    elif args.command == "dashboard":
+        from src.reporting.dashboard import run_dashboard
+
+        run_dashboard(args)
     else:
         parser.print_help()
         return 1

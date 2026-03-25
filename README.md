@@ -4,11 +4,12 @@ Standalone BTC forecasting pipeline using Temporal Fusion Transformer (TFT) acro
 
 ## What This Project Does
 - Downloads Binance spot OHLCV for BTCUSDT using CCXT.
-- Downloads Binance USDⓈ-M funding history and open interest (historical when available).
+- Downloads Binance USD-M futures funding history and open interest (historical when available).
 - Builds no-leak processed feature datasets for each timeframe.
 - Trains TFT quantile models (`q10/q50/q90`) on returns.
 - Runs monthly walk-forward backtests and writes metrics/plots/reports.
 - Produces forecasts with automatic fallback from `full` to `price_only` when derivatives coverage is low.
+- Builds dashboard summaries from artifacts and forecast outputs.
 
 ## Setup
 ```bash
@@ -27,6 +28,7 @@ python -m src build --timeframes 15m 1h 4h
 python -m src train --timeframe 15m --variant all
 python -m src backtest --timeframe 1h --variant full
 python -m src predict --timeframe 4h --variant auto
+python -m src dashboard --timeframes 15m 1h 4h --variants full price_only
 ```
 
 ## Deployment
@@ -43,6 +45,7 @@ docker compose run --rm btc-tft build --timeframes 15m 1h 4h --symbol BTCUSDT
 docker compose run --rm btc-tft train --timeframe 1h --variant all --max-epochs 25
 docker compose run --rm btc-tft backtest --timeframe 1h --variant all
 docker compose run --rm btc-tft predict --timeframe 1h --variant auto
+docker compose run --rm btc-tft dashboard --timeframes 15m 1h 4h --variants full price_only
 ```
 
 ### GitHub Actions (batch deployment)
@@ -66,7 +69,8 @@ docker compose run --rm btc-tft predict --timeframe 1h --variant auto
 - Processed data: `data/processed/btc_15m.parquet`, `btc_1h.parquet`, `btc_4h.parquet`
 - Training artifacts: `artifacts/{timeframe}/{variant}/`
 - Backtest report: `reports/summary.md`
-- Backtest plots: `reports/plots/`
+- Dashboard report: `reports/dashboard.md`
+- Backtest and dashboard plots: `reports/plots/`
 
 ## Known Limitations
 - Binance open interest history endpoint can have availability/range limits by symbol/time.
