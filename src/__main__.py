@@ -80,6 +80,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output file path (relative paths are resolved under reports/).",
     )
 
+    dashboard_web_parser = subparsers.add_parser(
+        "dashboard-web",
+        help="Launch interactive Streamlit dashboard",
+    )
+    dashboard_web_parser.add_argument("--host", type=str, default="127.0.0.1")
+    dashboard_web_parser.add_argument("--port", type=int, default=8501)
+
     return parser
 
 
@@ -111,6 +118,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         from src.reporting.dashboard import run_dashboard
 
         run_dashboard(args)
+    elif args.command == "dashboard-web":
+        from src.reporting.dashboard_web import run_dashboard_web
+
+        run_dashboard_web(args)
     else:
         parser.print_help()
         return 1

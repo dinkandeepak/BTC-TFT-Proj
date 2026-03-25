@@ -29,6 +29,7 @@ python -m src train --timeframe 15m --variant all
 python -m src backtest --timeframe 1h --variant full
 python -m src predict --timeframe 4h --variant auto
 python -m src dashboard --timeframes 15m 1h 4h --variants full price_only
+python -m src dashboard-web --host 127.0.0.1 --port 8501
 ```
 
 ## Deployment
@@ -46,6 +47,11 @@ docker compose run --rm btc-tft train --timeframe 1h --variant all --max-epochs 
 docker compose run --rm btc-tft backtest --timeframe 1h --variant all
 docker compose run --rm btc-tft predict --timeframe 1h --variant auto
 docker compose run --rm btc-tft dashboard --timeframes 15m 1h 4h --variants full price_only
+```
+
+Interactive dashboard in local environment:
+```bash
+python -m src dashboard-web --host 127.0.0.1 --port 8501
 ```
 
 ### GitHub Actions (batch deployment)

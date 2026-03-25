@@ -1,7 +1,7 @@
 PYTHON ?= python
 MODULE ?= src
 
-.PHONY: install download build train backtest predict dashboard test lint docker-build docker-run
+.PHONY: install download build train backtest predict dashboard dashboard-web test lint docker-build docker-run
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -23,6 +23,9 @@ predict:
 
 dashboard:
 	$(PYTHON) -m $(MODULE) dashboard
+
+dashboard-web:
+	$(PYTHON) -m $(MODULE) dashboard-web
 
 test:
 	$(PYTHON) -m pytest -q

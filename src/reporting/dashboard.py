@@ -201,6 +201,17 @@ def render_dashboard_markdown(entries: list[DashboardEntry]) -> str:
     return "\n".join(lines)
 
 
+def collect_entries(
+    timeframes: tuple[str, ...],
+    variants: tuple[str, ...],
+) -> list[DashboardEntry]:
+    entries: list[DashboardEntry] = []
+    for timeframe in timeframes:
+        for variant in variants:
+            entries.append(_collect_entry(timeframe=timeframe, variant=variant))
+    return entries
+
+
 def run_dashboard(args: Any) -> None:
     _setup_logging()
     ensure_directories()
@@ -211,11 +222,7 @@ def run_dashboard(args: Any) -> None:
     if not output_path.is_absolute():
         output_path = REPORTS_DIR / output_path
 
-    entries: list[DashboardEntry] = []
-    for timeframe in timeframes:
-        for variant in variants:
-            entries.append(_collect_entry(timeframe=timeframe, variant=variant))
-
+    entries = collect_entries(timeframes=timeframes, variants=variants)
     markdown = render_dashboard_markdown(entries)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(markdown, encoding="utf-8")
