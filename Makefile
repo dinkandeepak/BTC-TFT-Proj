@@ -1,7 +1,7 @@
 PYTHON ?= python
 MODULE ?= src
 
-.PHONY: install download build train backtest predict test lint
+.PHONY: install download build train backtest predict test lint docker-build docker-run
 
 install:
 	$(PYTHON) -m pip install -e .[dev]
@@ -26,3 +26,9 @@ test:
 
 lint:
 	$(PYTHON) -m ruff check .
+
+docker-build:
+	docker build -t btc-tft-forecasting .
+
+docker-run:
+	docker compose run --rm btc-tft --help

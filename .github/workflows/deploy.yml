@@ -1,0 +1,107 @@
+name: Deploy Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      start_date:
+        description: "UTC start date (YYYY-MM-DD)"
+        required: true
+        default: "2022-01-01"
+      end_date:
+        description: "UTC end date (YYYY-MM-DD)"
+        required: true
+        default: "2026-03-25"
+      timeframe:
+        description: "Target timeframe"
+        required: true
+        type: choice
+        options:
+          - 15m
+          - 1h
+          - 4h
+        default: 1h
+      run_train:
+        description: "Run training"
+        required: true
+        type: boolean
+        default: true
+      run_backtest:
+        description: "Run backtest"
+        required: true
+        type: boolean
+        default: true
+      predict_variant:
+        description: "Prediction variant"
+        required: true
+        type: choice
+        options:
+          - auto
+          - full
+          - price_only
+        default: auto
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev]
+
+      - name: Download raw data
+        run: |
+          python -m src download \
+            --symbol BTCUSDT \
+            --timeframes 15m 1h 4h \
+            --start-date "${{ inputs.start_date }}" \
+            --end-date "${{ inputs.end_date }}"
+
+      - name: Build processed datasets
+        run: |
+          python -m src build --timeframes 15m 1h 4h --symbol BTCUSDT
+
+      - name: Train models
+        if: ${{ inputs.run_train }}
+        run: |
+          python -m src train --timeframe "${{ inputs.timeframe }}" --variant all --max-epochs 25
+
+      - name: Backtest models
+        if: ${{ inputs.run_backtest }}
+        run: |
+          python -m src backtest --timeframe "${{ inputs.timeframe }}" --variant all
+
+      - name: Predict
+        run: |
+          python -m src predict --timeframe "${{ inputs.timeframe }}" --variant "${{ inputs.predict_variant }}"
+
+      - name: Upload data artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-artifacts
+          path: |
+            data/processed/
+
+      - name: Upload model artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifacts
+          path: |
+            artifacts/
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            reports/

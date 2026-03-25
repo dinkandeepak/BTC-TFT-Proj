@@ -29,6 +29,27 @@ python -m src backtest --timeframe 1h --variant full
 python -m src predict --timeframe 4h --variant auto
 ```
 
+## Deployment
+### Docker (local/server)
+Build the container image:
+```bash
+docker build -t btc-tft-forecasting .
+```
+
+Run commands through Docker Compose (persists `data/`, `artifacts/`, `reports/` on host):
+```bash
+docker compose run --rm btc-tft download --symbol BTCUSDT --timeframes 15m 1h 4h --start-date 2022-01-01 --end-date 2026-03-25
+docker compose run --rm btc-tft build --timeframes 15m 1h 4h --symbol BTCUSDT
+docker compose run --rm btc-tft train --timeframe 1h --variant all --max-epochs 25
+docker compose run --rm btc-tft backtest --timeframe 1h --variant all
+docker compose run --rm btc-tft predict --timeframe 1h --variant auto
+```
+
+### GitHub Actions (batch deployment)
+- Use `.github/workflows/deploy.yml` via **Actions -> Deploy Pipeline -> Run workflow**.
+- Inputs let you choose date range, timeframe, train/backtest toggles, and prediction variant.
+- Workflow uploads generated datasets, artifacts, and reports as downloadable run artifacts.
+
 ## No-Leak Alignment (Funding/OI)
 - Bars are indexed by close timestamp in UTC.
 - Funding and OI events are merged with `merge_asof(..., direction="backward")`.

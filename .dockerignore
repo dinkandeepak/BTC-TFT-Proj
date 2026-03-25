@@ -1,0 +1,27 @@
+# Python cache and build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+
+# Virtual env and local tooling
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Git and docs
+.git/
+.gitignore
+
+# Local data/artifacts should stay outside image layers
+data/
+artifacts/
+reports/
+
+# Environment files
+.env
+
+# OS/editor
+.DS_Store
+Thumbs.db

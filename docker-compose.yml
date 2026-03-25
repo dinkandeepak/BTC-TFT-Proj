@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  btc-tft:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./reports:/app/reports
+    entrypoint: ["python", "-m", "src"]
